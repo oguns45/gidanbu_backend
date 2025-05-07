@@ -1,0 +1,31 @@
+   if (!email) {
+        return next(new ErrorResponse('Error', 400, ['email is required']))
+    }
+    if (!password) {
+        return next(new ErrorResponse('Error', 400, ['password is required']))
+    }
+
+    const regexMail = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/
+    // const em = regexMail.test(email)
+    if (!regexMail.test(email)) {
+        return next(new ErrorResponse('Error', 400, ['Invalid email supplied']))
+    }
+
+    const regexPass = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[^\w\s]).{8,}$/
+    if (!regexPass.test(password)) {
+        return next(new ErrorResponse('Error', 400, ['password length must be greater or equal to 8 and must contain 1 uppercase letter, 1 lowercase letter, 1 special character, 1 number']))
+    }
+
+
+
+     // logger.log({ label: 'BODY', data: req.body })
+
+    // if (req.channel === AppChannel.WEB ) {
+        
+    // }
+    // if (req.channel === AppChannel.MOBILE ) {
+        
+    // }
+
+    // const role = await Role.create({})
+   
