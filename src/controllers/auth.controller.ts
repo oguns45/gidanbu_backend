@@ -1,59 +1,6 @@
-// import { Request, Response, NextFunction } from 'express'
-// import asyncHandler from "../middleware/async.mw";
-// import logger from '../utils/logger.utils';
-// import { RegisterDTO } from '../dtos/auth.dto';
-// import Role from '../models/Role.model';
-// import { AppChannel, UserType } from '../utils/enums.utils';
-// import ErrorResponse from '../utils/error.utils';
-// import User from '../models/User.model';
-// import UserService from '../services/user.service';
-// import AuthService from '../services/auth.service'
-// import AuthMapper from '../mappers/auth.mapper';
-
-// /**
-//  * @name register
-//  * @description Registers a new user for the application
-//  * @route POST /auth/register
-//  * @access everyone
-//  */
-
-// export const register = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-    
-//     const { email, password } = req.body as RegisterDTO;
-
-//     const validate = await AuthService.validateRegister(req.body)
-   
-//     if (validate.error) {
-//         return next(new ErrorResponse('Error', validate.code!, [validate.message]))
-//     }
-   
-//     //validate existing email
-//     const existUser = await User.findOne({email: email});
-
-//     if (existUser) {
-//         return next(new ErrorResponse('Error', 403, ["user already exists, use another email"]))
-//     }
-//     //create the user
-//     const user = await UserService.createUser({
-//         email: email,
-//         password: password,
-//         userType: UserType.BUSINESS
-//     });
-
-//     //map data
-//     const mapped = await AuthMapper.mapRegisteredUser(user)
-
-//     res.status(200).json({
-//         error: false,
-//         errors: [],
-//         data: mapped,
-//         message: 'successful',
-//         status: 200
-//     })
-// })
-
-
+// Project: Gidanbu Backend
 import { Request, Response, NextFunction } from 'express';
+import cloudinary from "../config/cloudinary";
 import asyncHandler from "../middleware/async.mw";
 import logger from '../utils/logger.utils';
 import { RegisterDTO, LoginDTO, ForgotPasswordDTO, ResetPasswordDTO } from '../dtos/auth.dto';
@@ -72,6 +19,7 @@ import { IUserDoc } from "../utils/interface.util";
 import Role from '../models/Role.model';
 import crypto from 'crypto'; // For generating password reset tokens
 import { Types } from 'mongoose';
+import streamifier from "streamifier";
 
 type DecodedToken = {
   userId: string;
@@ -120,6 +68,12 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
     return next(new ErrorResponse('Error', 403, ["User already exists, use another email"]));
   }
 
+  // // Get the default role (customer)
+  // const defaultRole = await Role.findOne({ name: 'customer' });
+  // if (!defaultRole) {
+  //   return next(new ErrorResponse('System error', 500, ['Default role not found']));
+  // }
+
   const user = await UserService.createUser({
     email,
     password,
@@ -127,6 +81,7 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
     firstName,
     lastName,
     userType: UserType.BUSINESS,
+    // roles: roleIds || [], // ✅ Assign role IDs here
   });
 
   const mapped = await AuthMapper.mapRegisteredUser(user);
@@ -147,7 +102,7 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
   });
 
   // Send welcome email
-  const message = `Welcome to Utter Utility! \nClick below to verify your email: http://localhost:3000/verify?token=${accessToken}\nYour username is ${username}`;
+  const message = `Welcome to Utter Utility! Click below to verify your email:Your username is ${username}`;
   const subject = "Welcome on board!";
   sendwelcomeEmail({ email: user.email, subject, message }, accessToken, username, user.role);
 });
@@ -167,12 +122,22 @@ export const login = asyncHandler(async (req: Request, res: Response, next: Next
   }
 
   const user = await User.findOne({ email: email }).select("+password") as IUserDoc;
+  console.log('Found user:', user); // Add this line
+  
 
   if (!user) {
     return next(new ErrorResponse("Error", 403, ["User does not exist, check your email or username"]));
   }
+  console.log("Password from login request:", password);
+  console.log("Stored hash in DB:", user.password);
 
-  const isPasswordValid = await user.comparePassword(password);
+  
+  // const isPasswordValid = await bcrypt.compare(password, user.password);
+  // const isPasswordValid = await user.comparePassword(password);
+  const isPasswordValid = await bcrypt.compare(password.trim(), user.password);
+
+  console.log("Password match result:", isPasswordValid);
+
   if (!isPasswordValid) {
     return res.status(400).json({ message: "Invalid email or password" });
   }
@@ -188,7 +153,7 @@ export const login = asyncHandler(async (req: Request, res: Response, next: Next
     name: user.username,
     email: user.email,
     role: user.role,
-    data: accessToken,
+    token: accessToken,
   });
 });
 
@@ -314,23 +279,116 @@ export const forgotPassword = asyncHandler(async (req: Request, res: Response, n
  * @route POST /auth/reset-password
  * @access everyone
  */
-export const resetPassword = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-  const { token, newPassword } = req.body as ResetPasswordDTO;
 
-  const user = await User.findOne({
-    resetPasswordToken: token,
-    resetPasswordExpires: { $gt: Date.now() },
-  }) as IUserDoc;
+export const changePassword = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const { oldPassword, newPassword } = req.body;
 
-  if (!user) {
-    return next(new ErrorResponse("Error", 400, ["Invalid or expired token"]));
+  // Validation
+  if (!oldPassword || !newPassword) {
+    return next(new ErrorResponse("Both passwords are required", 400, ["Both passwords are required"]));
   }
 
-  // Hash the new password and save it
+  if (newPassword.length < 8) {
+    return next(new ErrorResponse("Password must be at least 8 characters", 400, ["Password must be at least 8 characters"]));
+  }
+
+  // Verify user exists from middleware
+  if (!req.user || !req.user._id) {
+    return next(new ErrorResponse("Authentication required", 401, ["Authentication required"]));
+  }
+
+  const user = await User.findById(req.user._id).select("+password");
+  if (!user) {
+    return next(new ErrorResponse("User not found", 404, ["User not found"]));
+  }
+
+  // Compare passwords
+  const isMatch = await bcrypt.compare(oldPassword, user.password);
+  if (!isMatch) {
+    return next(new ErrorResponse("Incorrect current password", 401, ["Incorrect current password"]));
+  }
+
+  // Set new password
   user.password = newPassword;
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpires = undefined;
   await user.save();
 
-  res.status(200).json({ message: "Password reset successful" });
+  res.status(200).json({
+    success: true,
+    message: "Password updated successfully"
+  });
 });
+
+
+/**
+ * @name updateProfile
+ * @description Updates the user's profile
+ * @route PUT /auth/profile
+ * @access authenticated users
+ *
+ */
+
+
+
+export const uploadAvatarController = async (req: any, res: Response, next: NextFunction) => {
+  try {
+    console.log("Request file:", req.file);
+    console.log("Request body:", req.body);
+    if (!req.file) {
+      console.log("No file in request");
+      return next(new ErrorResponse("No file uploaded", 400, ["No file uploaded"]));
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return next(new ErrorResponse("User not found", 404, ["User not found"]));
+    }
+
+    // Delete old avatar if it exists
+    if (user.avatarPublicId) {
+      try {
+        await cloudinary.uploader.destroy(user.avatarPublicId);
+      } catch (cloudErr) {
+        console.error("Error deleting old avatar from Cloudinary:", cloudErr);
+      }
+    }
+
+    // Upload new avatar to Cloudinary
+    const streamUpload = (buffer: Buffer): Promise<any> => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: "avatar",
+            resource_type: "image",
+          },
+          (error, result) => {
+            if (error) {
+              return reject(error);
+            }
+            resolve(result);
+          }
+        );
+        streamifier.createReadStream(buffer).pipe(stream);
+      });
+    };
+
+    const result = await streamUpload(req.file.buffer);
+
+    // Update user model
+    user.avatarUrl = result.secure_url;
+    user.avatarPublicId = result.public_id;
+    await user.save();
+
+    return res.status(200).json({
+      message: "Avatar uploaded successfully",
+      avatarUrl: user.avatarUrl,
+    });
+  } catch (err: any) {
+    console.error("Upload Avatar Error:", err);
+    return res.status(500).json({
+      error: true,
+      message: "Server Error",
+      details: err.message,
+      status: 500,
+    });
+  }
+};

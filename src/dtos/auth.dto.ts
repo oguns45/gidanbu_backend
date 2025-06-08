@@ -28,7 +28,10 @@ export interface RegisterDTO {
   password: string; // The user's password
   username: string;
   firstName: string;
-  lastName: string; 
+  lastName: string;
+  // roles: Array<ObjectId | any>, 
+  
+
 }
 
 /**

@@ -7,6 +7,7 @@ import {
   getProductsByCategory,
   getRecommendedProducts,
   toggleFeaturedProduct,
+  getProduct,
 } from "../controllers/product.controller";
 import { adminRoute, protectRoute } from "../middleware/auth.mw";
 
@@ -18,6 +19,8 @@ const router: Router = express.Router();
  * @access  Protected (Admin)
  */
 router.get("/products", protectRoute, adminRoute, getAllProducts);
+
+
 
 /**
  * @route   GET /products/featured
@@ -31,18 +34,21 @@ router.get("/products/featured", getFeaturedProducts);
  * @desc    Retrieve products by category
  * @access  Public
  */
-router.get("/products/category/:category", getProductsByCategory);
 
+router.get("/products/category/:category", getProductsByCategory);
 /**
  * @route   GET /products/recommendations
  * @desc    Retrieve recommended products
  * @access  Public
  */
+
 router.get("/products/recommendations", getRecommendedProducts);
+
 
 /**
  * @route   POST /products
  * @desc    Create a new product (Admin only)
+ * 
  * @access  Protected (Admin)
  */
 router.post("/products/addpro", protectRoute, adminRoute, createProduct);
@@ -62,3 +68,11 @@ router.patch("/products/featured_change/:id", protectRoute, adminRoute, toggleFe
 router.delete("/products/delete/:id", protectRoute, adminRoute, deleteProduct);
 
 export default router;
+
+
+/**
+ * @route   GET /product
+ * @desc    Retrieve all products (Admin only)
+ * @access  Protected (Admin)
+ */
+router.get("/products/:id", getProduct);

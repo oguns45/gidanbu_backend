@@ -1,4 +1,4 @@
-import { Document, ObjectId, Types } from 'mongoose'
+import { Document, ObjectId, Schema, Types } from 'mongoose'
 
 //models
 export interface IRoleDoc extends Document{
@@ -11,7 +11,8 @@ export interface IRoleDoc extends Document{
     //generics
     createdAt: string,
     updatedAt: string,
-    _id: ObjectId,
+    // _id: ObjectId,
+    _id: Schema.Types.ObjectId;
     id: ObjectId,
     //functions
     getAll(): Array<IRoleDoc>,
@@ -76,6 +77,9 @@ export interface IUserDoc extends Document {
         quantity: number;
         product: Types.ObjectId;
     }[];
+
+    avatarUrl?: string;
+    avatarPublicId?: string;
     role: string;
     avatar?: string;
     username: string;

@@ -65,6 +65,57 @@ export const getAllProducts = async (req: Request, res: Response, next: NextFunc
 };
 
 
+export const getProduct = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const product = await Product.findById(req.params.id);// find all products
+    if (!product) {
+      res.status(404).json({ message: "Product not found" });
+      return; // Ensure the function exits after sending a response
+    }
+
+    await redis.set("product", JSON.stringify(product));
+    res.json(product);
+  } catch (error: any) {
+    console.error("Error in getAllProducts controller", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const deleteProduct = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      res.status(404).json({ message: "Product not found" });
+      return; // Ensure the function exits after sending a response
+    }
+
+    if (product.image) {
+      const publicId = product.image.split("/").pop()?.split(".")[0];
+      if (publicId) {
+        try {
+          await cloudinary.uploader.destroy(`products/${publicId}`);
+          console.log("Deleted image from Cloudinary");
+        } catch (error: any) {
+          console.error("Error deleting image from Cloudinary", error.message);
+        }
+      }
+    }
+
+    await Product.findByIdAndDelete(req.params.id);
+
+    res.json({ message: "Product deleted successfully" });
+  } catch (error: any) {
+    console.error("Error in deleteProduct controller", error.message);
+    next(error); // Pass the error to the error-handling middleware
+  }
+};
+
+
 
 export const getFeaturedProducts = async (
   req: Request,
@@ -101,84 +152,8 @@ export const getFeaturedProducts = async (
 };
 
 
-// export const createProduct = async (
-//   req: Request<{}, {}, CreateProductBody>, // Explicitly type the request body
-//   res: Response,
-//   next: NextFunction
-// ): Promise<void> => {
-//   try {
-//     const { name, description, price, image, category } = req.body;
-
-//     console.log("Received request body:", req.body);
-
-//     let cloudinaryResponse = null;
-
-//     if (image) {
-//       try {
-//         console.log("Uploading image to Cloudinary:", image);
-//         cloudinaryResponse = await cloudinary.uploader.upload(image, { folder: "products" });
-//         console.log("Cloudinary response:", cloudinaryResponse);
-//       } catch (uploadError: any) {
-//         console.error("Error uploading image to Cloudinary:", uploadError.message);
-//         res.status(400).json({
-//           message: "Failed to upload image",
-//           error: uploadError.message,
-//         });
-//         return; // Ensure the function exits after sending a response
-//       }
-//     }
-
-//     const product = await Product.create({
-//       name,
-//       description,
-//       price,
-//       image: cloudinaryResponse?.secure_url || "",
-//       category,
-//     });
-
-//     console.log("Product created successfully:", product);
-//     res.status(201).json(product);
-//   } catch (error: any) {
-//     console.error("Error in createProduct controller:", error.message);
-//     res.status(500).json({ message: "Server error", error: error.message });
-//   }
-// };
-  
 
 
-export const deleteProduct = async (
-  req: Request<{ id: string }>,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const product = await Product.findById(req.params.id);
-
-    if (!product) {
-      res.status(404).json({ message: "Product not found" });
-      return; // Ensure the function exits after sending a response
-    }
-
-    if (product.image) {
-      const publicId = product.image.split("/").pop()?.split(".")[0];
-      if (publicId) {
-        try {
-          await cloudinary.uploader.destroy(`products/${publicId}`);
-          console.log("Deleted image from Cloudinary");
-        } catch (error: any) {
-          console.error("Error deleting image from Cloudinary", error.message);
-        }
-      }
-    }
-
-    await Product.findByIdAndDelete(req.params.id);
-
-    res.json({ message: "Product deleted successfully" });
-  } catch (error: any) {
-    console.error("Error in deleteProduct controller", error.message);
-    next(error); // Pass the error to the error-handling middleware
-  }
-};
 
 export const getRecommendedProducts = async (req: Request, res: Response, next: NextFunction) => {
   try {

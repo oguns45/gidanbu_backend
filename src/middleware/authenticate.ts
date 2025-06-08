@@ -11,7 +11,8 @@ const authenticate = async (req: AuthenticatedRequest, res: Response, next: Next
       throw new Error('Authentication required');
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
+    // const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET as string) as { userId: string };
     const user = await User.findById(decoded.userId);
 
     if (!user) {
