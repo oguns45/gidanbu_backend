@@ -10,55 +10,29 @@ interface AuthenticatedRequest extends Request {
 // @desc    Create new order
 // @route   POST /api/orders
 // @access  Private
-// export const createOrder = asyncHandler(async (req, res) => {
-//   const { items, shippingAddress, totalAmount } = req.body;
-
-//   // Validate required fields
-//   if (!items || items.length === 0) {
-//     return res.status(400).json({ message: 'Order items are required' });
-//   }
-//   if (!shippingAddress?.address || !shippingAddress?.state) {
-//     return res.status(400).json({ message: 'Complete shipping address is required' });
-//   }
-
-//   const order = new Order({
-//     user: req.user._id,
-//     items, // Using correct field name
-//     shippingAddress,
-//     totalAmount,
-//     // Other fields will use schema defaults
-//   });
-
-//   const createdOrder = await order.save();
-//   res.status(201).json(createdOrder);
-// });
-
 export const createOrder = asyncHandler(async (req, res) => {
-  try {
-    const order = new Order({
-      user: req.user._id,
-      items: req.body.items,
-      shippingAddress: req.body.shippingAddress,
-      totalAmount: req.body.totalAmount,
-    });
+  const { items, shippingAddress, totalAmount } = req.body;
 
-    // Validate before saving
-    const validationError = order.validateSync();
-    if (validationError) {
-      console.error('Validation errors:', validationError.errors);
-      return res.status(400).json({ 
-        message: 'Validation failed',
-        errors: validationError.errors 
-      });
-    }
-
-    const createdOrder = await order.save();
-    res.status(201).json(createdOrder);
-  } catch (error) {
-    console.error('Order creation error:', error);
-    res.status(500).json({ message: 'Server error' });
+  // Validate required fields
+  if (!items || items.length === 0) {
+    return res.status(400).json({ message: 'Order items are required' });
   }
+  if (!shippingAddress?.address || !shippingAddress?.state) {
+    return res.status(400).json({ message: 'Complete shipping address is required' });
+  }
+
+  const order = new Order({
+    user: req.user._id,
+    items, // Using correct field name
+    shippingAddress,
+    totalAmount,
+    // Other fields will use schema defaults
+  });
+
+  const createdOrder = await order.save();
+  res.status(201).json(createdOrder);
 });
+
 
 // @desc    Get order by ID
 // @route   GET /api/orders/:id
