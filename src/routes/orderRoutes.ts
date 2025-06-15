@@ -6,7 +6,7 @@ import {
   declineOrderPayment,
   getMyOrders,
   getOrders,
-} from "../controllers/OrderController";
+} from "../controllers/orderController";
 import { protectRoute } from "../middleware/auth.mw";
 
 const router = express.Router();
