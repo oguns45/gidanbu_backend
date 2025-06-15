@@ -1,11 +1,13 @@
 {
-  "name": "url-shortner",
+  "name": "gidanbu_backend",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "NODE_ENV=production ts-node --respawn --transpile-only src/server.ts",
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
-  },
+  "start": "NODE_ENV=production node dist/server.js",
+  "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+  "build": "tsc"
+},
+
   "keywords": [],
   "author": "ADA",
   "license": "MIT",
