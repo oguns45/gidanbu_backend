@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import asyncHandler from "../middleware/async.mw";
-import Order, { IOrder } from '../models/Order';
+import Order, { IOrder } from '../models/Order.model';
+import { redis } from "../config/redis";
 import { IUserDoc } from "../utils/interface.util";
+
 
 interface AuthenticatedRequest extends Request {
   user: IUserDoc & { _id: string }; // Assumes you attach a `user` object with `_id`
@@ -10,20 +12,22 @@ interface AuthenticatedRequest extends Request {
 // @desc    Create new order
 // @route   POST /api/orders
 // @access  Private
-export const createOrder = asyncHandler(async (req, res) => {
+export const createOrder = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { items, shippingAddress, totalAmount } = req.body;
 
   // Validate required fields
   if (!items || items.length === 0) {
-    return res.status(400).json({ message: 'Order items are required' });
+    res.status(400);
+    throw new Error('Order items are required');
   }
   if (!shippingAddress?.address || !shippingAddress?.state) {
-    return res.status(400).json({ message: 'Complete shipping address is required' });
+    res.status(400);
+    throw new Error('Complete shipping address is required');
   }
 
   const order = new Order({
     user: req.user._id,
-    items, // Using correct field name
+    items,
     shippingAddress,
     totalAmount,
     // Other fields will use schema defaults
@@ -39,6 +43,13 @@ export const createOrder = asyncHandler(async (req, res) => {
 // @access  Private
 export const getOrderById = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const order = await Order.findById(req.params.id).populate('user', 'name email');
+  if (!order) {
+    res.status(404);
+    throw new Error('Order not found');
+  }
+  // Optionally cache the order in Redis
+  await redis.set(`order_${req.params.id}`, JSON.stringify(order));
+  console.log(`Order ${req.params.id} cached in Redis`);
 
   if (order) {
     res.json(order);
@@ -71,6 +82,19 @@ export const approveOrderPayment = asyncHandler(async (req: AuthenticatedRequest
 // @access  Private
 export const getMyOrders = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const orders = await Order.find({ user: req.user._id });
+  if (!orders || orders.length === 0) {
+    res.status(404);
+    throw new Error('No orders found for this user');
+  }
+  // Populate user details for each order
+  orders.forEach(order => {
+    if (order.user) {
+      (order as any).userName = order.user.name; // Add user name to each order
+    }
+  });
+  // Optionally cache orders in Redis
+  await redis.set(`user_orders_${req.user._id}`, JSON.stringify(orders));
+  console.log(`Orders for user ${req.user._id} cached in Redis`);
   res.json(orders);
 });
 
@@ -79,6 +103,18 @@ export const getMyOrders = asyncHandler(async (req: AuthenticatedRequest, res: R
 // @access  Private/Admin
 export const getOrders = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const orders = await Order.find({}).populate('user', 'id name');
+  if (!orders || orders.length === 0) {
+    res.status(404);
+    throw new Error('No orders found');
+  }
+  // Populate user details for each order
+  orders.forEach(order => {
+    if (order.user) {
+      (order as any).userName = order.user.name; // Add user name to each order
+    }
+  });
+  // Optionally cache orders in Redis
+  await redis.set('all_orders', JSON.stringify(orders));
   res.json(orders);
 });
 

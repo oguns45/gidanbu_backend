@@ -1,63 +1,81 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Document, Schema } from 'mongoose';
 
-// Interface for product details within an order
-interface IOrderProduct {
+export interface IOrderItem {
   product: mongoose.Types.ObjectId;
+  name: string;
   quantity: number;
   price: number;
+  image: string;
 }
 
-// Interface for the order schema
+export interface IShippingAddress {
+  address: string;
+  state: string;
+  accountName: string;
+}
+
 export interface IOrder extends Document {
   user: mongoose.Types.ObjectId;
-  products: IOrderProduct[];
+  items: IOrderItem[];
+  shippingAddress: IShippingAddress;
+  paymentStatus: 'pending' | 'approved' | 'rejected';
   totalAmount: number;
-  stripeSessionId?: string; // Optional field
+  orderStatus: 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  paymentProof?: string;
+  rejectionReason?: string;
   createdAt: Date;
-  updatedAt: Date;
+  stripeSessionId?: string;
 }
 
-// Order schema definition
-const orderSchema = new Schema<IOrder>(
-  {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    products: [
-      {
-        product: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Product",
-          required: true,
-        },
-        quantity: {
-          type: Number,
-          required: true,
-          min: 1,
-        },
-        price: {
-          type: Number,
-          required: true,
-          min: 0,
-        },
-      },
-    ],
-    totalAmount: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    stripeSessionId: {
-      type: String,
-      unique: true,
-    },
+const OrderSchema: Schema = new Schema<IOrder>({
+  user: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
-  { timestamps: true }
-);
+  items: [{
+    product: {
+      type: Schema.Types.ObjectId,
+      ref: 'Product',
+      required: false // Temporarily make optional for debugging
+    },
+    name: { type: String, required: true },
+    quantity: { type: Number, required: true, min: 1 },
+    price: { type: Number, required: true, min: 0 },
+    image: { type: String, required: true }
+    
+  }],
+  shippingAddress: {
+    address: { type: String, required: true },
+    state: { type: String, required: true },
+    accountName: { type: String, required: true }
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  totalAmount: { type: Number, required: true },
+  orderStatus: {
+    type: String,
+    enum: ['processing', 'shipped', 'delivered', 'cancelled'],
+    default: 'processing'
+  },
+  rejectionReason: {
+    type: String,
+    default: ''
+  },
+  paymentProof: { type: String },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  stripeSessionId: {
+    type: String,
+    unique: true,
+    sparse: true // This allows multiple null values
+  },
+});
 
-// Create the Order model
-const Order: Model<IOrder> = mongoose.model<IOrder>("Order", orderSchema);
-
-export default Order;
+// ✅ Safe export to prevent OverwriteModelError
+export default mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);

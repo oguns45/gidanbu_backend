@@ -16,6 +16,7 @@ router.get("/auth/profile", protectRoute, getProfile);
 router.post('/auth/change-password' , protectRoute, changePassword);
 // Uncomment the following line if you have an updateProfile controller
 // router.patch('/profile', uploadAvatar.single('avatar'),updateProfile);
+
 router.post(
     "/auth/upload-avatar",
     protectRoute,

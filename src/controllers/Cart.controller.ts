@@ -5,49 +5,7 @@ import Product from "../models/Product.model";
 import Cart from "../models/Cart.model";
 import Coupon from "../models/Coupon.model";
 import { IUser } from "../utils/interface.util";
-
-// Get all products in the user's cart and compute the total amount
-// export const getCartProducts = async (req: Request, res: Response): Promise<void> => {
-//   try {
-//     const user = req.user as IUser | undefined; // Extract the authenticated user from the request
-
-//     if (!user) {
-//       res.status(401).json({ message: "User not authenticated" }); // Return error if user is not authenticated
-//       return;
-//     }
-
-//     // Find the cart associated with the user and populate product details
-//     const cart = await Cart.findOne({ userId: user._id }).populate("items.productId");
-
-//     if (!cart) {
-//       res.status(404).json({ message: "Cart not found" }); // Return error if cart does not exist
-//       return;
-//     }
-
-//     let totalAmount = 0; // Initialize total amount
-
-//     // Map over cart items to calculate total price
-//     const cartItems = cart.items.map((item) => {
-//       const product = item.productId as any; // Type assertion to access product properties
-//       const productTotal = product.price * item.quantity; // Calculate total price for each item
-//       totalAmount += productTotal; // Add to total amount
-//       return {
-//         product,
-//         quantity: item.quantity,
-//         productTotal,
-//       };
-//     });
-
-//     // Return the cart details and total amount
-//     res.json({
-//       items: cartItems,
-//       totalAmount,
-//     });
-//   } catch (error: any) {
-//     console.error("Error in getCartProducts controller:", error.message);
-//     res.status(500).json({ message: "Server error", error: error.message });
-//   }
-// };
+import { redis } from "../config/redis";
 
 
 export const getCartProducts = async (req: Request, res: Response): Promise<void> => {
@@ -69,6 +27,7 @@ export const getCartProducts = async (req: Request, res: Response): Promise<void
 
     let totalAmount = 0;
 
+
     // Map through the cart items and calculate the total amount
     const cartItems = cart.items.map((item) => {
       const product = item.productId as any; // Populated product
@@ -80,6 +39,9 @@ export const getCartProducts = async (req: Request, res: Response): Promise<void
         productTotal,
       };
     });
+    // Cache the cart items in Redis
+    await redis.set(`cart_${userId}`, JSON.stringify(cartItems));
+    console.log(`Cart items for user ${userId} cached in Redis`);
 
     res.json({
       items: cartItems,
@@ -146,9 +108,66 @@ export const addToCart = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+// export const removeAllFromCart = async (req: Request, res: Response): Promise<void> => {
+//   try {
+//     const { productId } = req.body;
+//     const user = req.user as IUser | undefined;
+
+//     if (!user) {
+//       res.status(401).json({ message: "User not authenticated" });
+//       return;
+//     }
+
+//     const cart = await Cart.findOne({ userId: user._id }); // Find user's cart
+
+//     if (!cart) {
+//       res.status(404).json({ message: "Cart not found" });
+//       return;
+//     }
+
+//     if (!productId) {
+//       res.status(400).json({ message: "Product ID is required" }); // Updated error message
+//       return;
+//     }
+
+//     if (cart.items.length === 0) {
+//       res.status(404).json({ message: "Cart is empty" });
+//       return;
+//     }
+
+//     // Remove specific product
+//     const initialItemCount = cart.items.length;
+//     cart.items = cart.items.filter((item) => item.productId.toString() !== productId);
+
+//     if (cart.items.length === initialItemCount) {
+//       res.status(404).json({ message: "Product not found in cart" });
+//       return;
+//     }
+
+//     await cart.save(); // Save updated cart
+
+//     // Recalculate total amount
+//     const updatedCart = await Cart.findOne({ userId: user._id }).populate("items.productId");
+//     let totalAmount = 0;
+//     updatedCart?.items.forEach((item) => {
+//       const product = item.productId as any;
+//       totalAmount += product.price * item.quantity;
+//     });
+
+//     res.json({
+//       cart: updatedCart,
+//       totalAmount,
+//     });
+//   } catch (error: any) {
+//     console.error("Error in removeAllFromCart controller:", error.message);
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
+// Update the quantity of a product in the cart and recalculate the total amount
+
 export const removeAllFromCart = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { productId } = req.body;
+    const { productIds } = req.body;
     const user = req.user as IUser | undefined;
 
     if (!user) {
@@ -156,15 +175,15 @@ export const removeAllFromCart = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    const cart = await Cart.findOne({ userId: user._id }); // Find user's cart
-
-    if (!cart) {
-      res.status(404).json({ message: "Cart not found" });
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+      res.status(400).json({ message: "Product IDs are required" });
       return;
     }
 
-    if (!productId) {
-      res.status(400).json({ message: "Product ID is required" }); // Updated error message
+    const cart = await Cart.findOne({ userId: user._id });
+
+    if (!cart) {
+      res.status(404).json({ message: "Cart not found" });
       return;
     }
 
@@ -173,18 +192,19 @@ export const removeAllFromCart = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    // Remove specific product
     const initialItemCount = cart.items.length;
-    cart.items = cart.items.filter((item) => item.productId.toString() !== productId);
+
+    cart.items = cart.items.filter(
+      (item) => !productIds.includes(item.productId.toString())
+    );
 
     if (cart.items.length === initialItemCount) {
-      res.status(404).json({ message: "Product not found in cart" });
+      res.status(404).json({ message: "No matching products found in cart" });
       return;
     }
 
-    await cart.save(); // Save updated cart
+    await cart.save();
 
-    // Recalculate total amount
     const updatedCart = await Cart.findOne({ userId: user._id }).populate("items.productId");
     let totalAmount = 0;
     updatedCart?.items.forEach((item) => {
@@ -201,7 +221,9 @@ export const removeAllFromCart = async (req: Request, res: Response): Promise<vo
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-// Update the quantity of a product in the cart and recalculate the total amount
+
+
+
 export const updateQuantity = async (req: Request, res: Response): Promise<void> => {
   const { id: productId } = req.params;
   const { quantity } = req.body;

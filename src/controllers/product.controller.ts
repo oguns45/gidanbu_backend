@@ -140,6 +140,7 @@ export const getFeaturedProducts = async (
       return; // Ensure the function exits after sending a response
     }
 
+    
     // Serialize the array of products to a string for caching
     featuredProducts = JSON.stringify(products);
     await redis.set("featured_products", featuredProducts);
@@ -169,6 +170,14 @@ export const getRecommendedProducts = async (req: Request, res: Response, next: 
         },
       },
     ]);
+    if (!products || products.length === 0) {
+      return res.status(404).json({ message: "No recommended products found" });
+    }
+
+    // Cache the recommended products in Redis
+    await redis.set("recommended_products", JSON.stringify(products));
+    console.log("Recommended products cached in Redis");
+    // Return the recommended products
 
     res.json(products);
   } catch (error: any) {
@@ -195,6 +204,9 @@ export const getProductsByCategory = async (
       if (products.length === 0) {
         return res.status(404).json({ message: "No products found in this category" });
       }
+      // Cache the products by category in Redis
+      await redis.set(`products_by_category_${sanitizedCategory}`, JSON.stringify(products));
+      console.log(`Products for category "${sanitizedCategory}" cached in Redis`);
   
       res.json({ products });
     } catch (error: any) {

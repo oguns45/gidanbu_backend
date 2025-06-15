@@ -30,7 +30,7 @@ import userAgent from 'express-useragent'
 import authRoutes from '../routes/auth'
 import CouponRoutes from '../routes/coupon.route';
 import ProductRoutes from '../routes/product.route';
-import PaymentRoutes from '../routes/payment.route';
+// import PaymentRoutes from '../routes/payment.route';
 import CartRoutes from '../routes/cart.route';
 import AnalysisRoutes from '../routes/analystics.route';
 //import PaymentsRoutes from '../routes/payments.route';
@@ -41,6 +41,7 @@ import orderRoutes from '../routes/orderRoutes';
 config();
 
 const app = express(); 
+
 
 // 🔧 Fix the error
 app.set("trust proxy", 1);
@@ -167,7 +168,7 @@ app.get('/', (req: Request, res: Response, next: NextFunction) =>{
 app.use('/api', authRoutes)
 app.use('/api', CouponRoutes)
 app.use('/api', ProductRoutes)
-app.use('/api', PaymentRoutes)
+// app.use('/api', PaymentRoutes)
 //app.use('/api', PaymentsRoutes)
 app.use('/api', CartRoutes)
 app.use('/api', AnalysisRoutes)

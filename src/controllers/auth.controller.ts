@@ -104,7 +104,7 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
   // Send welcome email
   const message = `Welcome to Utter Utility! Click below to verify your email:Your username is ${username}`;
   const subject = "Welcome on board!";
-  sendwelcomeEmail({ email: user.email, subject, message }, accessToken, username, user.role);
+  // sendwelcomeEmail({ email: user.email, subject, message }, accessToken, username, user.role);
 });
 
 /**
