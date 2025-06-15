@@ -21,7 +21,6 @@ router.get("/orders/my", protectRoute, getMyOrders);
 // Get a specific order by ID
 router.get("/orders/:id", protectRoute, getOrderById);
 
-
 // Approve order payment
 router.patch("/orders/:id/approve", protectRoute, approveOrderPayment);
 
