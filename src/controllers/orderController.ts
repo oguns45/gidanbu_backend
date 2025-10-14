@@ -9,7 +9,7 @@ interface AuthenticatedRequest extends Request {
   user: IUserDoc & { _id: string }; // Assumes you attach a `user` object with `_id`
 }
 
-// @desc    Create new order
+// @desc    Create new order0
 // @route   POST /api/orders
 // @access  Private
 // export const createOrder = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
@@ -40,7 +40,7 @@ interface AuthenticatedRequest extends Request {
 export const createOrder = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { items, shippingAddress, totalAmount } = req.body;
 
-  // Validate required fields
+  // Validation
   if (!items || items.length === 0) {
     res.status(400);
     throw new Error("Order items are required");
@@ -50,17 +50,17 @@ export const createOrder = asyncHandler(async (req: AuthenticatedRequest, res: R
     throw new Error("Complete shipping address is required");
   }
 
-  // ✅ Fetch user to extract name
-  const user = req.user; // from auth middleware
+  // Ensure req.user is available (from auth middleware)
+  const user = req.user;
   if (!user) {
     res.status(401);
     throw new Error("User not found or unauthorized");
   }
 
-  // ✅ Create order
+  // ✅ Create the order with username
   const order = new Order({
     user: user._id,
-    username: user.name, // store user's name directly
+    username: user.name || user.username, // use whichever your schema uses
     items,
     shippingAddress,
     totalAmount,
@@ -68,7 +68,7 @@ export const createOrder = asyncHandler(async (req: AuthenticatedRequest, res: R
 
   const createdOrder = await order.save();
 
-  // ✅ Populate user details before returning
+  // ✅ Populate user info before sending back
   const populatedOrder = await createdOrder.populate("user", "name email");
 
   res.status(201).json(populatedOrder);
