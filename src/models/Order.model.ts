@@ -27,55 +27,110 @@ export interface IOrder extends Document {
   stripeSessionId?: string;
 }
 
+// const OrderSchema: Schema = new Schema<IOrder>({
+//   user: {
+//     type: Schema.Types.ObjectId,
+//     ref: 'User',
+//     required: true
+//   },
+//   items: [{
+//     product: {
+//       type: Schema.Types.ObjectId,
+//       ref: 'Product',
+//       required: false // Temporarily make optional for debugging
+//     },
+//     name: { type: String, required: true },
+//     quantity: { type: Number, required: true, min: 1 },
+//     price: { type: Number, required: true, min: 0 },
+//     image: { type: String, required: true }
+    
+//   }],
+//   shippingAddress: {
+//     address: { type: String, required: true },
+//     state: { type: String, required: true },
+//     accountName: { type: String, required: true }
+//   },
+//   paymentStatus: {
+//     type: String,
+//     enum: ['pending', 'approved', 'rejected'],
+//     default: 'pending'
+//   },
+//   totalAmount: { type: Number, required: true },
+//   orderStatus: {
+//     type: String,
+//     enum: ['processing', 'shipped', 'delivered', 'cancelled'],
+//     default: 'processing'
+//   },
+//   rejectionReason: {
+//     type: String,
+//     default: ''
+//   },
+//   paymentProof: { type: String },
+//   createdAt: {
+//     type: Date,
+//     default: Date.now
+//   },
+//   stripeSessionId: {
+//     type: String,
+//     unique: true,
+//     sparse: true // This allows multiple null values
+//   },
+// });
+
 const OrderSchema: Schema = new Schema<IOrder>({
   user: {
     type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: "User",
+    required: true,
   },
-  items: [{
-    product: {
-      type: Schema.Types.ObjectId,
-      ref: 'Product',
-      required: false // Temporarily make optional for debugging
+  username: { // optional denormalized field
+    type: String,
+  },
+  items: [
+    {
+      product: {
+        type: Schema.Types.ObjectId,
+        ref: "Product",
+        required: false,
+      },
+      name: { type: String, required: true },
+      quantity: { type: Number, required: true, min: 1 },
+      price: { type: Number, required: true, min: 0 },
+      image: { type: String, required: true },
     },
-    name: { type: String, required: true },
-    quantity: { type: Number, required: true, min: 1 },
-    price: { type: Number, required: true, min: 0 },
-    image: { type: String, required: true }
-    
-  }],
+  ],
   shippingAddress: {
     address: { type: String, required: true },
     state: { type: String, required: true },
-    accountName: { type: String, required: true }
+    accountName: { type: String, required: true },
   },
   paymentStatus: {
     type: String,
-    enum: ['pending', 'approved', 'rejected'],
-    default: 'pending'
+    enum: ["pending", "approved", "rejected"],
+    default: "pending",
   },
   totalAmount: { type: Number, required: true },
   orderStatus: {
     type: String,
-    enum: ['processing', 'shipped', 'delivered', 'cancelled'],
-    default: 'processing'
+    enum: ["processing", "shipped", "delivered", "cancelled"],
+    default: "processing",
   },
   rejectionReason: {
     type: String,
-    default: ''
+    default: "",
   },
   paymentProof: { type: String },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   stripeSessionId: {
     type: String,
     unique: true,
-    sparse: true // This allows multiple null values
+    sparse: true,
   },
 });
+
 
 // ✅ Safe export to prevent OverwriteModelError
 export default mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);

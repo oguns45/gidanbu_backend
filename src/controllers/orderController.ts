@@ -40,19 +40,27 @@ interface AuthenticatedRequest extends Request {
 export const createOrder = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { items, shippingAddress, totalAmount } = req.body;
 
-  // ✅ Validate required fields
+  // Validate required fields
   if (!items || items.length === 0) {
     res.status(400);
-    throw new Error('Order items are required');
+    throw new Error("Order items are required");
   }
   if (!shippingAddress?.address || !shippingAddress?.state) {
     res.status(400);
-    throw new Error('Complete shipping address is required');
+    throw new Error("Complete shipping address is required");
+  }
+
+  // ✅ Fetch user to extract name
+  const user = req.user; // from auth middleware
+  if (!user) {
+    res.status(401);
+    throw new Error("User not found or unauthorized");
   }
 
   // ✅ Create order
   const order = new Order({
-    user: req.user._id,
+    user: user._id,
+    username: user.name, // store user's name directly
     items,
     shippingAddress,
     totalAmount,
@@ -60,12 +68,11 @@ export const createOrder = asyncHandler(async (req: AuthenticatedRequest, res: R
 
   const createdOrder = await order.save();
 
-  // ✅ Populate user name and email before returning
-  const populatedOrder = await createdOrder.populate('user', 'name email');
+  // ✅ Populate user details before returning
+  const populatedOrder = await createdOrder.populate("user", "name email");
 
   res.status(201).json(populatedOrder);
 });
-
 
 
 // @desc    Get order by ID
