@@ -222,7 +222,7 @@ export const removeAllFromCart = async (req: Request, res: Response): Promise<vo
     const initialItemCount = cart.items.length;
 
     cart.items = cart.items.filter(
-      (item) => !productIds.includes(item.productId.toString())
+      (item) => !productIds.includes(item.productId?.toString())
     );
 
     if (cart.items.length === initialItemCount) {
@@ -234,9 +234,12 @@ export const removeAllFromCart = async (req: Request, res: Response): Promise<vo
 
     const updatedCart = await Cart.findOne({ userId: user._id }).populate("items.productId");
     let totalAmount = 0;
+
     updatedCart?.items.forEach((item) => {
       const product = item.productId as any;
-      totalAmount += product.price * item.quantity;
+      if (product && product.price != null) {
+        totalAmount += product.price * item.quantity;
+      }
     });
 
     res.json({
@@ -251,6 +254,7 @@ export const removeAllFromCart = async (req: Request, res: Response): Promise<vo
 
 
 
+
 export const updateQuantity = async (req: Request, res: Response): Promise<void> => {
   const { id: productId } = req.params;
   const { quantity } = req.body;
@@ -262,15 +266,14 @@ export const updateQuantity = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const cart = await Cart.findOne({ userId: user._id }); // Find user's cart
+    const cart = await Cart.findOne({ userId: user._id });
 
     if (!cart) {
       res.status(404).json({ message: "Cart not found" });
       return;
     }
 
-    // Find the item in the cart
-    const existingItem = cart.items.find((item) => item.productId.toString() === productId);
+    const existingItem = cart.items.find((item) => item.productId?.toString() === productId);
 
     if (!existingItem) {
       res.status(404).json({ message: "Product not found in cart" });
@@ -278,20 +281,21 @@ export const updateQuantity = async (req: Request, res: Response): Promise<void>
     }
 
     if (quantity === 0) {
-      // Remove item if quantity is set to 0
-      cart.items = cart.items.filter((item) => item.productId.toString() !== productId);
+      cart.items = cart.items.filter((item) => item.productId?.toString() !== productId);
     } else {
-      existingItem.quantity = quantity; // Update quantity
+      existingItem.quantity = quantity;
     }
 
-    await cart.save(); // Save updated cart
+    await cart.save();
 
-    // Recalculate total amount
     const updatedCart = await Cart.findOne({ userId: user._id }).populate("items.productId");
+
     let totalAmount = 0;
     updatedCart?.items.forEach((item) => {
       const product = item.productId as any;
-      totalAmount += product.price * item.quantity;
+      if (product && product.price != null) {
+        totalAmount += product.price * item.quantity;
+      }
     });
 
     res.json({
@@ -306,9 +310,7 @@ export const updateQuantity = async (req: Request, res: Response): Promise<void>
 
 
 
-
-
-// Ensure TypeScript recognizes the custom type definition:
+// Ensure TypeScript recognizes the custom type definition:k
 
 // Make sure your tsconfig.json includes the types directory in the typeRoots or include section. For example:
 
