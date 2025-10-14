@@ -8,12 +8,13 @@ import {
   getRecommendedProducts,
   toggleFeaturedProduct,
   getProduct,
+  updateProduct,
 } from "../controllers/product.controller";
 import { adminRoute, protectRoute } from "../middleware/auth.mw";
 
 const router: Router = express.Router();
 
-/**
+/***
  * @route   GET /products
  * @desc    Retrieve all products (Admin only)
  * @access  Protected (Admin)
@@ -76,3 +77,11 @@ export default router;
  * @access  Protected (Admin)
  */
 router.get("/products/:id", getProduct);
+
+
+/**
+ * @route   PUT /products/:id
+ * @desc    Update an existing product
+ * @access  Protected (Admin)
+ */
+router.put("/products/:id", protectRoute, adminRoute, updateProduct);

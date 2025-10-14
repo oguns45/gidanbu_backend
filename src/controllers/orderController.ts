@@ -12,10 +12,35 @@ interface AuthenticatedRequest extends Request {
 // @desc    Create new order
 // @route   POST /api/orders
 // @access  Private
+// export const createOrder = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+//   const { items, shippingAddress, totalAmount } = req.body;
+
+//   // Validate required fields
+//   if (!items || items.length === 0) {
+//     res.status(400);
+//     throw new Error('Order items are required');
+//   }
+//   if (!shippingAddress?.address || !shippingAddress?.state) {
+//     res.status(400);
+//     throw new Error('Complete shipping address is required');
+//   }
+
+//   const order = new Order({
+//     user: req.user._id,
+//     items,
+//     shippingAddress,
+//     totalAmount,
+//     // Other fields will use schema defaults
+//   });
+
+//   const createdOrder = await order.save();
+//   res.status(201).json(createdOrder);
+// });
+
 export const createOrder = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { items, shippingAddress, totalAmount } = req.body;
 
-  // Validate required fields
+  // ✅ Validate required fields
   if (!items || items.length === 0) {
     res.status(400);
     throw new Error('Order items are required');
@@ -25,17 +50,22 @@ export const createOrder = asyncHandler(async (req: AuthenticatedRequest, res: R
     throw new Error('Complete shipping address is required');
   }
 
+  // ✅ Create order
   const order = new Order({
     user: req.user._id,
     items,
     shippingAddress,
     totalAmount,
-    // Other fields will use schema defaults
   });
 
   const createdOrder = await order.save();
-  res.status(201).json(createdOrder);
+
+  // ✅ Populate user name and email before returning
+  const populatedOrder = await createdOrder.populate('user', 'name email');
+
+  res.status(201).json(populatedOrder);
 });
+
 
 
 // @desc    Get order by ID

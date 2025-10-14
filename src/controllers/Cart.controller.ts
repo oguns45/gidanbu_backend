@@ -7,7 +7,6 @@ import Coupon from "../models/Coupon.model";
 import { IUser } from "../utils/interface.util";
 import { redis } from "../config/redis";
 
-
 export const getCartProducts = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.params.userId;
@@ -17,8 +16,8 @@ export const getCartProducts = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // Find the cart and populate the product details
-    const cart = await Cart.findOne({ userId: userId }).populate("items.productId");
+    // Find the cart and populate product details
+    const cart = await Cart.findOne({ userId }).populate("items.productId");
 
     if (!cart) {
       res.status(404).json({ message: "Cart not found" });
@@ -27,35 +26,53 @@ export const getCartProducts = async (req: Request, res: Response): Promise<void
 
     let totalAmount = 0;
 
+    // Filter out items where product data is missing
+    const validItems = cart.items.filter(item => item.productId !== null);
 
-    // Map through the cart items and calculate the total amount
-    const cartItems = cart.items.map((item) => {
+    // Log any missing products (for debugging)
+    if (validItems.length < cart.items.length) {
+      console.warn(
+        `⚠️ Some cart items for user ${userId} have invalid or deleted product references.`
+      );
+    }
+
+    const cartItems = validItems.map(item => {
       const product = item.productId as any; // Populated product
-      const productTotal = product.price * item.quantity;
+      const productTotal = (product?.price || 0) * item.quantity;
       totalAmount += productTotal;
+
       return {
         product,
         quantity: item.quantity,
         productTotal,
       };
     });
-    // Cache the cart items in Redis
-    await redis.set(`cart_${userId}`, JSON.stringify(cartItems));
-    console.log(`Cart items for user ${userId} cached in Redis`);
+
+    // Cache in Redis (optional)
+    try {
+      await redis.set(`cart_${userId}`, JSON.stringify(cartItems));
+      console.log(`🧠 Cached cart items for user ${userId} in Redis`);
+    } catch (cacheError: any) {
+      console.warn("Redis caching skipped:", cacheError.message);
+    }
 
     res.json({
       items: cartItems,
       totalAmount,
     });
+
   } catch (error: any) {
-    console.error("Error in getCartProducts controller:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("❌ Error in getCartProducts controller:", error);
+    res.status(500).json({
+      message: "Server error while fetching cart",
+      error: error.message,
+    });
   }
 };
-// Add a product to the user's cart and recalculate the total amount
+
 export const addToCart = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { productId } = req.body; // Get product ID from request body
+    const { productId } = req.body;
     const user = req.user as IUser | undefined;
 
     if (!user) {
@@ -63,39 +80,48 @@ export const addToCart = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const product = await Product.findById(productId); // Check if product exists
+    const product = await Product.findById(productId);
     if (!product) {
       res.status(404).json({ message: "Product not found" });
       return;
     }
 
-    let cart = await Cart.findOne({ userId: user._id }); // Find user's cart
-
+    // Find or create user's cart
+    let cart = await Cart.findOne({ userId: user._id });
     if (!cart) {
-      // Create new cart if not found
       cart = new Cart({
         userId: user._id,
         items: [{ productId, quantity: 1 }],
       });
     } else {
-      // Check if product is already in the cart
-      const existingItem = cart.items.find((item) => item.productId.toString() === productId);
+      // Check if product already exists
+      const existingItem = cart.items.find(
+        (item) => item.productId.toString() === productId
+      );
 
       if (existingItem) {
-        existingItem.quantity += 1; // Increment quantity if already in cart
+        existingItem.quantity += 1;
       } else {
-        cart.items.push({ productId, quantity: 1 }); // Add new product
+        cart.items.push({ productId, quantity: 1 });
       }
     }
 
-    await cart.save(); // Save cart to database
+    await cart.save();
 
-    // Recalculate total amount
+    // ✅ Recalculate safely
     const updatedCart = await Cart.findOne({ userId: user._id }).populate("items.productId");
     let totalAmount = 0;
+
     updatedCart?.items.forEach((item) => {
-      const product = item.productId as any;
-      totalAmount += product.price * item.quantity;
+      const productDoc = item.productId as any;
+
+      // ✅ Safety check: skip if product missing
+      if (!productDoc || !productDoc.price) {
+        console.warn("⚠️ Missing product info for cart item:", item);
+        return;
+      }
+
+      totalAmount += productDoc.price * (item.quantity ?? 0);
     });
 
     res.json({
@@ -107,6 +133,7 @@ export const addToCart = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 // export const removeAllFromCart = async (req: Request, res: Response): Promise<void> => {
 //   try {

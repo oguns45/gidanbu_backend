@@ -52,6 +52,68 @@ interface CreateProductBody {
       next(error);
     }
   };
+
+
+
+  export const updateProduct = async (
+    req: Request<{ id: string }, {}, Partial<any>>,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params;
+      const { name, description, price, image, category } = req.body;
+  
+      // Find existing product
+      const product = await Product.findById(id);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+  
+      // If there's a new image, upload to Cloudinary
+      let imageUrl = product.image;
+      if (image && image !== product.image) {
+        try {
+          console.log("Uploading new image to Cloudinary...");
+          const cloudinaryResponse = await cloudinary.uploader.upload(image, {
+            folder: "products",
+          });
+  
+          imageUrl = cloudinaryResponse.secure_url;
+  
+          // Optional: delete old image from Cloudinary
+          // (only if you stored public_id previously)
+          // if (product.cloudinaryId) {
+          //   await cloudinary.uploader.destroy(product.cloudinaryId);
+          // }
+        } catch (uploadError: any) {
+          console.error("Cloudinary Upload Error:", uploadError);
+          return res.status(400).json({
+            message: "Failed to upload new image",
+            error: uploadError.message,
+          });
+        }
+      }
+  
+      // Update product fields
+      product.name = name || product.name;
+      product.description = description || product.description;
+      product.price = price || product.price;
+      product.category = category || product.category;
+      product.image = imageUrl;
+  
+      // Save the updated product
+      const updatedProduct = await product.save();
+  
+      res.status(200).json({
+        message: "Product updated successfully",
+        product: updatedProduct,
+      });
+    } catch (error: any) {
+      console.error("Error in updateProduct:", error);
+      next(error);
+    }
+  };
   
 
 export const getAllProducts = async (req: Request, res: Response, next: NextFunction) => {

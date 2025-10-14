@@ -11,7 +11,7 @@ import { protectRoute } from "../middleware/auth.mw";
 
 const router = express.Router();
 
-// Create and get all orders
+// Create and get all orders.
 router.post("/orders", protectRoute, createOrder);
 router.get("/orders", protectRoute, getOrders);
 
