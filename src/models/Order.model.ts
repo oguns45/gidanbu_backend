@@ -86,6 +86,10 @@ const OrderSchema: Schema = new Schema<IOrder>({
   username: { // optional denormalized field
     type: String,
   },
+  phoneNumber: {
+    type: String,
+    required: true,
+  },
   items: [
     {
       product: {

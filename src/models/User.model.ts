@@ -63,7 +63,8 @@ const UserSchema = new Schema<IUserDoc>(
         },
         phoneNumber: {
             type: String,
-            default: '',
+            // default: '',
+            required: [true, "phonenumber is required"],
         },
         phoneCode: {
             type: String,

@@ -37,6 +37,7 @@ import AnalysisRoutes from '../routes/analystics.route';
 const rateLimit = require("express-rate-limit");
 import { limitRequests } from '../middleware/ratelimit.mw'
 import orderRoutes from '../routes/orderRoutes';
+import systemRoutes from '../routes/systemRoutes';
 //load my env vars
 config();
 
@@ -172,7 +173,9 @@ app.use('/api', ProductRoutes)
 //app.use('/api', PaymentsRoutes)
 app.use('/api', CartRoutes)
 app.use('/api', AnalysisRoutes)
+app.use('/api/system', systemRoutes);
 app.use('/api', orderRoutes);
+
 
 app.use(errorHandler)
 

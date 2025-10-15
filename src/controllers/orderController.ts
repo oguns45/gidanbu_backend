@@ -36,11 +36,10 @@ interface AuthenticatedRequest extends Request {
 //   const createdOrder = await order.save();
 //   res.status(201).json(createdOrder);
 // });
-
 export const createOrder = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { items, shippingAddress, totalAmount } = req.body;
 
-  // Validation
+  // ✅ Validation
   if (!items || items.length === 0) {
     res.status(400);
     throw new Error("Order items are required");
@@ -50,17 +49,18 @@ export const createOrder = asyncHandler(async (req: AuthenticatedRequest, res: R
     throw new Error("Complete shipping address is required");
   }
 
-  // Ensure req.user is available (from auth middleware)
+  // ✅ Ensure authenticated user
   const user = req.user;
   if (!user) {
     res.status(401);
     throw new Error("User not found or unauthorized");
   }
 
-  // ✅ Create the order with username
+  // ✅ Create order including username and phoneNumber
   const order = new Order({
     user: user._id,
-    username: user.name || user.username, // use whichever your schema uses
+    username: user.username || user.name || "Unknown",
+    phoneNumber: user.phoneNumber || "N/A",
     items,
     shippingAddress,
     totalAmount,
@@ -68,8 +68,8 @@ export const createOrder = asyncHandler(async (req: AuthenticatedRequest, res: R
 
   const createdOrder = await order.save();
 
-  // ✅ Populate user info before sending back
-  const populatedOrder = await createdOrder.populate("user", "name email");
+  // ✅ Populate user fields
+  const populatedOrder = await createdOrder.populate("user", "name email phoneNumber");
 
   res.status(201).json(populatedOrder);
 });

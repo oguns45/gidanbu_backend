@@ -55,7 +55,7 @@ const setCookies = (res: Response, accessToken: string, refreshToken: string): v
  * @access everyone
  */
 export const register = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-  const { email, password, username, firstName, lastName } = req.body as RegisterDTO;
+  const { email, password, username, firstName, lastName, phoneNumber } = req.body as RegisterDTO;
   const validate = await AuthService.validateRegister(req.body);
 
   if (validate.error) {
@@ -80,8 +80,10 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
     username,
     firstName,
     lastName,
+    phoneNumber,
+
     userType: UserType.BUSINESS,
-    // roles: roleIds || [], // ✅ Assign role IDs here
+    // roles: roleIds || [], // ✅ Assign role IDs here0
   });
 
   const mapped = await AuthMapper.mapRegisteredUser(user);
