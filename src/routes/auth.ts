@@ -1,5 +1,5 @@
 import express from "express";
-import { login, logout, register, refreshToken, getProfile, uploadAvatarController, changePassword } from "../controllers/auth.controller";
+import { login, logout, register, refreshToken, getProfile, uploadAvatarController, changePassword, getAllUsers, updateOnlineStatus } from "../controllers/auth.controller";
 import { protectRoute } from "../middleware/auth.mw";
 // import { updateProfile } from './controllers/user.controller';
 import { uploadAvatar } from "../middleware/upload.mw";
@@ -14,7 +14,12 @@ router.post("/auth/logout", logout);
 router.post("/auth/refresh-token", refreshToken);
 router.get("/auth/profile", protectRoute, getProfile);
 router.post('/auth/change-password' , protectRoute, changePassword);
-// Uncomment the following line if you have an updateProfile controller
+
+// routes/userRoutes.ts
+router.get("/auth/", protectRoute, getAllUsers);
+router.patch("/auth/:id/online", protectRoute, updateOnlineStatus);
+
+// Uncomment the following line if you have an updateProfile controllers
 // router.patch('/profile', uploadAvatar.single('avatar'),updateProfile);
 
 router.post(

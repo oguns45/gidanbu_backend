@@ -134,6 +134,9 @@ export const login = asyncHandler(async (req: Request, res: Response, next: Next
   console.log("Stored hash in DB:", user.password);
 
   
+
+
+  
   // const isPasswordValid = await bcrypt.compare(password, user.password);
   // const isPasswordValid = await user.comparePassword(password);
   const isPasswordValid = await bcrypt.compare(password.trim(), user.password);
@@ -149,6 +152,12 @@ export const login = asyncHandler(async (req: Request, res: Response, next: Next
   await storeRefreshToken(user._id.toString(), refreshToken);
 
   setCookies(res, accessToken, refreshToken);
+
+  
+  // ✅ Mark user online
+  user.isOnline = true;
+  user.lastActive = new Date();
+  await user.save();
 
   res.json({
     _id: user._id,
@@ -180,6 +189,13 @@ export const logout = asyncHandler(async (req: AuthenticatedRequest, res: Respon
   try {
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET as string) as { userId: string };
     await redis.del(`refresh_token:${decoded.userId}`);
+    // ✅ Mark user offline
+    // ✅ Mark user offline
+    await User.findByIdAndUpdate(decoded.userId, {
+      isOnline: false,
+      lastActive: new Date(),
+    });
+
   } catch (err: any) {
     if (err instanceof jwt.JsonWebTokenError) {
       res.clearCookie("refreshToken");
@@ -192,6 +208,7 @@ export const logout = asyncHandler(async (req: AuthenticatedRequest, res: Respon
     throw err;
   }
 
+  
   res.clearCookie("accessToken");
   res.clearCookie("refreshToken");
   res.status(200).json({ message: "Logged out successfully" });
@@ -394,3 +411,43 @@ export const uploadAvatarController = async (req: any, res: Response, next: Next
     });
   }
 };
+
+
+
+/**
+ * @name getAllUsers
+ * @description List all users and their online status
+ * @route GET /auth/users
+ * @access admin only
+ */
+export const getAllUsers = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  // ✅ Restrict access to admins
+  if (!req.user || req.user.role !== "admin") {
+    return next(new ErrorResponse("Unauthorized access", 403, ["Admin only"]));
+  }
+
+  const users = await User.find({}, "username email role isOnline lastActive avatarUrl createdAt updatedAt")
+    .sort({ createdAt: -1 });
+
+  res.status(200).json(users);
+});
+
+
+/**
+ * @desc Update user online status
+ * @route PATCH /api/users/update-status
+ * @access Private (Authenticated)
+ */
+export const updateOnlineStatus = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.user?._id) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
+
+  // Update online status and last activity time
+  await User.findByIdAndUpdate(req.user._id, {
+    isOnline: true,
+    lastActive: new Date(),
+  });
+
+  res.status(200).json({ success: true, message: "User status updated" });
+});

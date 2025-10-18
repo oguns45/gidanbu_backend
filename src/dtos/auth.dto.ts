@@ -29,6 +29,7 @@ export interface RegisterDTO {
   username: string;
   firstName: string;
   lastName: string;
+  phoneNumber: string; // The user's phone number
   // roles: Array<ObjectId | any>, 
   
 

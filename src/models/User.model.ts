@@ -77,6 +77,13 @@ const UserSchema = new Schema<IUserDoc>(
         //         ref: 'Role',
         //     },
         // ],
+
+            // ✅ Add these:
+    
+    // ✅ Add these:
+        isOnline: { type: Boolean, default: false },
+        lastActive: { type: Date, default: Date.now },
+
         resetPasswordToken: {
             type: String,
             default: undefined,

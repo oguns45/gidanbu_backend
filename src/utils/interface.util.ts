@@ -73,6 +73,9 @@ export interface IUserDoc extends Document {
     name: string;
     email: string;
     password: string;
+    isOnline: boolean;  
+    lastActive: Date;
+  
     cartItems: {
         quantity: number;
         product: Types.ObjectId;
