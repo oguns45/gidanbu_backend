@@ -451,3 +451,4 @@ export const updateOnlineStatus = asyncHandler(async (req: AuthenticatedRequest,
 
   res.status(200).json({ success: true, message: "User status updated" });
 });
+
