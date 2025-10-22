@@ -17,6 +17,8 @@ export interface IShippingAddress {
 export interface IOrder extends Document {
   user: mongoose.Types.ObjectId;
   items: IOrderItem[];
+  username?: string;        // ✅ add this
+  phoneNumber: string;      // ✅ add this
   shippingAddress: IShippingAddress;
   paymentStatus: 'pending' | 'approved' | 'rejected';
   totalAmount: number;
@@ -89,7 +91,9 @@ const OrderSchema: Schema = new Schema<IOrder>({
   phoneNumber: {
     type: String,
     required: true,
+    default: "N/A",
   },
+  
   items: [
     {
       product: {
