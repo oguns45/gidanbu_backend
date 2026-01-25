@@ -132,11 +132,11 @@ UserSchema.methods.comparePassword = async function (password: string): Promise<
 
 UserSchema.methods.generateTokens = async function (userId: string): Promise<{ accessToken: string; refreshToken: string }> {
     const accessToken = jwt.sign({ userId }, process.env.ACCESS_TOKEN_SECRET as string, {
-        expiresIn: '7d',
+        expiresIn: '265d',
     });
 
     const refreshToken = jwt.sign({ userId }, process.env.REFRESH_TOKEN_SECRET as string, {
-        expiresIn: '7d',
+        expiresIn: '265d',
     });
 
     return { accessToken, refreshToken };
