@@ -1,5 +1,5 @@
 import express from "express";
-import { login, logout, register, refreshToken, getProfile, uploadAvatarController, changePassword, getAllUsers, updateOnlineStatus } from "../controllers/auth.controller";
+import { login, logout, register, refreshToken, getProfile, uploadAvatarController, changePassword, getAllUsers, updateOnlineStatus, loginAdmin } from "../controllers/auth.controller";
 import {adminRoute, protectRoute } from "../middleware/auth.mw";
 // import { updateProfile } from './controllers/user.controller';
 import { uploadAvatar } from "../middleware/upload.mw";
@@ -11,8 +11,8 @@ const router = express.Router();
 router.post("/auth/register", register);
 router.post("/auth/login", login);
 router.post("/auth/logout", logout);
-router.post("/auth/admin/login", protectRoute, adminRoute, login);
-router.post("/auth/admin/logout", protectRoute, adminRoute, logout);
+router.post("/auth/admin/login", loginAdmin);
+router.post("/auth/admin/logout", logout);
 router.post("/auth/refresh-token", refreshToken);
 router.get("/auth/profile", protectRoute, getProfile);
 router.post('/auth/change-password' , protectRoute, changePassword);
