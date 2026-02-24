@@ -23,9 +23,9 @@ const UserSchema = new Schema<IUserDoc>(
         ],
         role: {
             type: String,
-            enum: ["customer", "admin"],
+            enum: ["customer", "super_admin", "admin", "sub_admin"],
             default: "customer",
-        },
+        },  
         avatar: {
             type: String,
             default: '',

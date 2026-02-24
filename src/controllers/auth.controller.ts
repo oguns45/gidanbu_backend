@@ -168,75 +168,141 @@ export const login = asyncHandler(async (req: Request, res: Response, next: Next
   });
 });
 
+// /**
+//  * @name login
+//  * @description Logs in a user
+//  * @route POST /auth/login
+//  * @access everyone
+//  */
+// export const loginAdmin = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+//   const { email, password } = req.body as LoginDTO;
+
+//   const validate = await AuthService.validateLogin(req.body);
+//   if (validate.error) {
+//     return next(new ErrorResponse("Error", validate.code!, [validate.message]));
+//   }
+
+//   const user = await User.findOne({ email: email }).select("+password") as IUserDoc;
+//   console.log('Found user:', user); // Add this line
+  
+
+//   if (!user) {
+//     return next(new ErrorResponse("Error", 403, ["User does not exist, check your email or username"]));
+//   }
+//   console.log("Password from login request:", password);
+//   console.log("Stored hash in DB:", user.password);
+
+//   if (req.originalUrl.includes("/admin")) {
+//     if (user.role !== "admin") {
+//       return res.status(403).json({
+//         message: "Access denied. Admins only."
+//       });
+//     }
+//   }
+
+
+  
+
+
+  
+//   // const isPasswordValid = await bcrypt.compare(password, user.password);
+//   // const isPasswordValid = await user.comparePassword(password);
+//   const isPasswordValid = await bcrypt.compare(password.trim(), user.password);
+
+//   console.log("Password match result:", isPasswordValid);
+
+//   if (!isPasswordValid) {
+//     return res.status(400).json({ message: "Invalid email or password" });
+//   }
+
+//   const userId: string = (user._id as Types.ObjectId).toString();
+//   const { accessToken, refreshToken } = await user.generateTokens(userId);
+//   await storeRefreshToken(user._id.toString(), refreshToken);
+
+//   setCookies(res, accessToken, refreshToken);
+
+  
+//   // ✅ Mark user online
+//   user.isOnline = true;
+//   user.lastActive = new Date();
+//   await user.save();
+
+//   res.json({
+//   _id: user._id,
+//   name: user.username,
+//   email: user.email,
+//   role: user.role,
+//   token: accessToken,
+//   refreshToken,
+// });
+
+// });
+
+
 /**
- * @name login
+ * @name login Admin
  * @description Logs in a user
  * @route POST /auth/login
  * @access everyone
  */
-export const loginAdmin = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-  const { email, password } = req.body as LoginDTO;
+export const loginAdmin = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { email, password } = req.body as LoginDTO;
 
-  const validate = await AuthService.validateLogin(req.body);
-  if (validate.error) {
-    return next(new ErrorResponse("Error", validate.code!, [validate.message]));
-  }
+    const validate = await AuthService.validateLogin(req.body);
+    if (validate.error) {
+      return next(
+        new ErrorResponse("Error", validate.code!, [validate.message])
+      );
+    }
 
-  const user = await User.findOne({ email: email }).select("+password") as IUserDoc;
-  console.log('Found user:', user); // Add this line
-  
+    const user = (await User.findOne({ email }).select(
+      "+password"
+    )) as IUserDoc;
 
-  if (!user) {
-    return next(new ErrorResponse("Error", 403, ["User does not exist, check your email or username"]));
-  }
-  console.log("Password from login request:", password);
-  console.log("Stored hash in DB:", user.password);
+    if (!user) {
+      return next(
+        new ErrorResponse("Error", 403, [
+          "User does not exist, check your email or username",
+        ])
+      );
+    }
 
-  if (req.originalUrl.includes("/admin")) {
-    if (user.role !== "admin") {
-      return res.status(403).json({
-        message: "Access denied. Admins only."
+    const isPasswordValid = await bcrypt.compare(
+      password.trim(),
+      user.password
+    );
+
+    if (!isPasswordValid) {
+      return res.status(400).json({
+        message: "Invalid email or password",
       });
     }
+
+    const userId: string = user._id.toString();
+
+    const { accessToken, refreshToken } =
+      await user.generateTokens(userId);
+
+    await storeRefreshToken(userId, refreshToken);
+
+    setCookies(res, accessToken, refreshToken);
+
+    // Mark user online
+    user.isOnline = true;
+    user.lastActive = new Date();
+    await user.save();
+
+    res.json({
+      _id: user._id,
+      name: user.username,
+      email: user.email,
+      role: user.role, // ✅ IMPORTANT
+      token: accessToken,
+      refreshToken,
+    });
   }
-
-
-  
-
-
-  
-  // const isPasswordValid = await bcrypt.compare(password, user.password);
-  // const isPasswordValid = await user.comparePassword(password);
-  const isPasswordValid = await bcrypt.compare(password.trim(), user.password);
-
-  console.log("Password match result:", isPasswordValid);
-
-  if (!isPasswordValid) {
-    return res.status(400).json({ message: "Invalid email or password" });
-  }
-
-  const userId: string = (user._id as Types.ObjectId).toString();
-  const { accessToken, refreshToken } = await user.generateTokens(userId);
-  await storeRefreshToken(user._id.toString(), refreshToken);
-
-  setCookies(res, accessToken, refreshToken);
-
-  
-  // ✅ Mark user online
-  user.isOnline = true;
-  user.lastActive = new Date();
-  await user.save();
-
-  res.json({
-  _id: user._id,
-  name: user.username,
-  email: user.email,
-  role: user.role,
-  token: accessToken,
-  refreshToken,
-});
-
-});
+);
 
 /**
  * @name logout
