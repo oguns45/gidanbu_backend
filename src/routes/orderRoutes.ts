@@ -6,6 +6,7 @@ import {
   declineOrderPayment,
   getMyOrders,
   getOrders,
+  updateOrderStatus,
 } from "../controllers/orderController";
 
 import { protectRoute } from "../middleware/auth.mw";
@@ -22,6 +23,7 @@ router.get("/orders/my", protectRoute, getMyOrders);
 // Get a specific order by ID
 router.get("/orders/:id", protectRoute, getOrderById);
 
+router.put("/orders/:id/status", protectRoute, updateOrderStatus);
 // Approve order payment
 router.patch("/orders/:id/approve", protectRoute, approveOrderPayment);
 

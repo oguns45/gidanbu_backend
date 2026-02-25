@@ -114,6 +114,29 @@ export const approveOrderPayment = asyncHandler(async (req: AuthenticatedRequest
   }
 });
 
+
+
+// @desc    Get logged in user orders
+// @route   router.put("/orders/:id/status", protect, updateOrderStatus);
+// @access  Private
+
+export const updateOrderStatus = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const order = await Order.findById(req.params.id);
+
+    if (order) {
+      order.orderStatus = req.body.status;
+
+      const updatedOrder = await order.save();
+      res.json(updatedOrder);
+    } else {
+      res.status(404);
+      throw new Error("Order not found");
+    }
+  }
+);
+
+
 // @desc    Get logged in user orders
 // @route   GET /api/orders/myorders
 // @access  Private
